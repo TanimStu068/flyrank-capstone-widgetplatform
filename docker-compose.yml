@@ -1,0 +1,29 @@
+# One command: docker compose up --build
+#   API + dashboard  http://localhost:3000   (demo data is seeded on boot)
+#   Customer site    http://localhost:5500   (second origin; embeds the widget with one <script> line)
+#   Mailpit inbox    http://localhost:8025   (catches the confirmation emails)
+services:
+  app:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      PORT: "3000"
+      PUBLIC_BASE_URL: http://localhost:3000
+      DATABASE_PATH: /data/app.db
+      GEO_MODE: mock                 # deterministic; set to "real" to call ip-api.com / ipapi.co
+      ENABLE_FAULT_INJECTION: "true" # lets reviewers switch geo/email providers "down". Never in production.
+      SEED_ON_BOOT: "true"
+      DEMO_API_KEY: demo_key_local_only   # demo-only value, not a secret
+      SMTP_URL: smtp://mailpit:1025
+      IP_HASH_SALT: compose-demo-salt
+    volumes: ["appdata:/data"]
+    depends_on: [mailpit]
+  site:
+    build: .
+    command: ["node", "scripts/serve-site.js"]
+    ports: ["5500:5500"]
+  mailpit:
+    image: axllent/mailpit
+    ports: ["8025:8025", "1025:1025"]
+volumes:
+  appdata:

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Owner dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{color-scheme:light dark}body{font-family:system-ui,sans-serif;max-width:900px;margin:30px auto;padding:0 16px}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid #8884;padding:6px 8px;text-align:left}
+input{padding:6px;width:320px}button{padding:6px 12px}pre{background:#8881;padding:10px;overflow:auto}
+</style></head><body>
+<h1>Owner dashboard</h1>
+<p>Paste your API key (kept in memory only), then load.</p>
+<input id="key" type="password" placeholder="fr_live_..."> <button id="go">Load</button>
+<p id="msg"></p><h2>Stats (30 days)</h2><pre id="stats">-</pre>
+<h2>Latest submissions</h2>
+<table><thead><tr><th>When</th><th>Widget</th><th>Data</th><th>Geo</th></tr></thead><tbody id="rows"></tbody></table>
+<script>
+const $ = (id) => document.getElementById(id);
+async function api(path){
+  const r = await fetch(path, { headers: { Authorization: 'Bearer ' + $('key').value } });
+  if(!r.ok) throw new Error(r.status + ' ' + (await r.text()));
+  return r.json();
+}
+$('go').onclick = async () => {
+  $('msg').textContent = '';
+  try {
+    $('stats').textContent = JSON.stringify(await api('/api/stats'), null, 2);
+    const { items } = await api('/api/submissions?limit=50');
+    const tbody = $('rows'); tbody.replaceChildren();
+    for (const s of items) {
+      const tr = document.createElement('tr');
+      [s.createdAt, s.widgetId, JSON.stringify(s.data), s.geo ? [s.geo.city, s.geo.country, '(' + s.geo.provider + ')'].join(' ') : '-']
+        .forEach((t) => { const td = document.createElement('td'); td.textContent = t; tr.appendChild(td); });
+      tbody.appendChild(tr);
+    }
+  } catch (e) { $('msg').textContent = e.message; }
+};
+</script></body></html>
